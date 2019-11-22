@@ -4,6 +4,7 @@ $(document).ready(function(){
 
     //receive details from server
     socket.on('mqtt_data', function(msg) {
-        $('#mqtt_string01').html(msg.mqtt_string01);
+        $('#mqtt_string0').html(msg.mqtt_string0);
+        $('#mqtt_string1').html(msg.mqtt_string1);
     });
 });

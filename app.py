@@ -16,17 +16,22 @@ socketio = SocketIO(app)
 thread = Thread()
 thread_stop_event = Event()
 
-MQTTDataPayload = ''
+mqtt_username = os.environ.get('mqtt_username')
+mqtt_password = os.environ.get('mqtt_password')
+mqtt_data_payload = ['', '']
 
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
-    client.subscribe(os.environ.get('mqtt_username') + '/topic1')
+    client.subscribe([(mqtt_username + '/buttons', 0), (mqtt_username + '/axis', 0)])
 
 
 def on_message(client, userdata, msg):
     print(msg.topic + " " + str(msg.payload))
-    global MQTTDataPayload
-    MQTTDataPayload = msg.topic + ' ' + str(msg.payload.decode("utf-8"))
+    global mqtt_data_payload
+    if msg.topic == mqtt_username + '/buttons':
+        mqtt_data_payload[0] = msg.topic + ' ' + str(msg.payload.decode("utf-8"))
+    elif msg.topic == mqtt_username + '/axis':
+        mqtt_data_payload[1] = msg.topic + ' ' + str(msg.payload.decode("utf-8"))
 
 
 class GetMQTTDataThread(Thread):
@@ -41,16 +46,14 @@ class GetMQTTDataThread(Thread):
         client.on_connect = on_connect
         client.on_message = on_message
 
-        client.username_pw_set(os.environ.get('mqtt_username'), os.environ.get('mqtt_password'))
+        client.username_pw_set(mqtt_username, mqtt_password)
         client.connect("maqiatto.com", 1883, 60)
 
         client.loop_start()
 
         while not thread_stop_event.isSet():
 
-            mqtt_string01 = MQTTDataPayload
-
-            socketio.emit('mqtt_data', {'mqtt_string01': mqtt_string01}, namespace='/test')
+            socketio.emit('mqtt_data', {'mqtt_string0': mqtt_data_payload[0], 'mqtt_string1': mqtt_data_payload[1]}, namespace='/test')
             sleep(self.delay)
 
 
@@ -83,4 +86,4 @@ def test_disconnect():
 
 
 if __name__ == '__main__':
-    socketio.run(app, '127.0.0.1', 6968)
+    socketio.run(app, '192.168.1.5', 6968)
